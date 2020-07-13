@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>game</title>
+    <link rel="stylesheet" href="scripts/style.css">
+    
+</head>
+
+<body>
+    <div id="play-screen" style="display:none">
+        <button id="play-playButton">play</button>
+    </div>
+    <div id="login-screen" style="display:none">
+        <button id="login-loginButton">Login</button>
+        <input type="text" id="login-nameInput" placeholder="enter your name">
+    </div>
+    <div id="game-screen" style="display:none">
+        <table>
+            <tr>
+                <td id="game-playerName">Player Name</td>
+                <td id="game-enemyName">Enemy Name</td>
+            </tr>
+            <tr>
+                <td id="game-playerHealth">Player Health</td>
+                <td id="game-enemyHealth">Enemy Health</td>
+            </tr>
+        </table>
+        <p id="game-time"></p>
+        <canvas id="game-canvas">
+    </canvas>
+    <br>
+    <p id="game-questionText" text-align="center">a</p>
+        <button onclick="btn1Click()" id="game-button1">button 1</button>
+        <button onclick="btn2Click()" id="game-button2">button 2</button>
+        <br>
+        <button onclick="btn3Click()" id="game-button3">button 3</button>
+        <button onclick="btn4Click()" id="game-button4">button 4</button>
+        
+    </div>
+    <div id="instructions-screen" style="display:none">
+        <button id="instructions-startGameButton">Play Game</button>
+    </div>
+    <div id="highscores-screen" style="display:none">
+        <p id="highscores-scores"></p>
+        <button id="highscores-restartButton">Restart</button>
+    </div>
+    
+</body>
+
+<script src="scripts/test.js"></script>
+
+</html>
