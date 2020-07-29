@@ -2,11 +2,14 @@ const elements = {
     play : {
         screen: document.getElementById("play-screen"),
         playButton: document.getElementById("play-playButton"),
+        instructionButton: document.getElementById("play-instructionButton"),
+        highscoreButton: document.getElementById("play-highscoreButton"),
     },
     login: {
         screen: document.getElementById("login-screen"),
         loginButton: document.getElementById("login-loginButton"),
-        nameInput: document.getElementById("login-nameInput")
+        nameInput: document.getElementById("login-nameInput"),
+        backButton: document.getElementById("login-backButton"),
     },
     game: {
         screen: document.getElementById("game-screen"),
@@ -21,10 +24,11 @@ const elements = {
         canvas: document.getElementById("game-canvas"),
         time: document.getElementById("game-time"),
         questionText: document.getElementById("game-questionText"),
+        coins: document.getElementById("game-coins")
     },
     instructions: {
         screen: document.getElementById("instructions-screen"),
-        startGameButton: document.getElementById("instructions-startGameButton")
+        backButton: document.getElementById("instructions-backButton")
     },
     highscores: {
         screen: document.getElementById("highscores-screen"),
@@ -58,39 +62,74 @@ let playerName;
 let playerHealth;
 let enemyName;
 let enemyHealth;
-let playerPos = elements.game.canvas.width / 8;
-let enemyPos =  elements.game.canvas.width * (3 / 4);
+let playerPos;
+let enemyPos;
 let hasMoved = false;
 var ctx = elements.game.canvas.getContext("2d");
+var shopImage = new Image();
 var playerImage = new Image();
 var enemyImage = new Image();
 const enemyImagePath = 'assets/images/enemy';
 let enemyImageChooser;
 var gameMusic = document.createElement("audio");
+let timeUpgradeLevel = 1;
+let strengthLevel = 1;
+let enemyWeakness = 1;
+let coin = 0;
+let isShop = false;
+let played = false;
+
+window.onload = function() {
+    gameMusic.src = "assets/sounds/startTheme.mp3"
+    gameMusic.loop = true;
+    gameMusic.play();
+}
 
 elements.play.playButton.addEventListener("click", function(){
     showLogin();
+    gameMusic.play();
+});
+
+elements.play.instructionButton.addEventListener("click", function(){
+    showInstructions();
+    gameMusic.play();
+});
+
+elements.play.highscoreButton.addEventListener("click", function(){
+    if (localStorage.getItem("highScoresList") === null) {
+        alert("Hark! Ye art the first man to set foot in this land, there stand no records before us. \nShalt thou change this by thine hand?\nPress Play to get started.")
+    } else {
+        showHighscores(played);
+    }
 });
 
 elements.login.loginButton.addEventListener("click", function(){
     if (elements.login.nameInput.value === "") {
-        alert("Please enter a name");
+        alert("Enter thine name, young warrior!");
     } else {
         if (elements.login.nameInput.value.includes(",") || elements.login.nameInput.value.includes(".")) {
-            alert("Please enter a name which does not contain '.' or ','");
+            alert("Thine name cannot contain '.' or ','");
         } else {
-            showInstructions();
+            showGame();
             playerName = elements.login.nameInput.value;
         }  
     }  
 });
 
-elements.instructions.startGameButton.addEventListener("click", function(){
-    showGame();
+elements.login.backButton.addEventListener("click", function(){
+    showPlay();
+});
+
+elements.instructions.backButton.addEventListener("click", function(){
+    showPlay();
 });
 
 elements.highscores.restartButton.addEventListener("click", function(){
-    window.location.reload();
+    if (played) {
+        window.location.reload();
+    } else {
+        showPlay();
+    }
 });
 
 function hideScreens() {
@@ -109,14 +148,23 @@ function showPlay() {
 }
 
 function showLogin() {
-    gameMusic.src = "assets/sounds/startTheme.mp3"
-    gameMusic.loop = true;
-    gameMusic.play();
     showScreen(elements.login.screen);
 }
 
 function showInstructions() {
     showScreen(elements.instructions.screen);
+}
+
+
+function drawBackground() {
+    ctx.fillStyle = "deepskyblue";
+    ctx.beginPath();
+    ctx.rect(0, 0, elements.game.canvas.width, elements.game.canvas.height * (3 / 8));
+    ctx.fill();
+    ctx.fillStyle = "#5b8930";
+    ctx.beginPath();
+    ctx.rect(0, elements.game.canvas.height * (3 / 8), elements.game.canvas.width, elements.game.canvas.height * (5 / 8));
+    ctx.fill();
 }
 
 function showGame() {
@@ -125,39 +173,60 @@ function showGame() {
     enemyName = randomNameGen();
     playerHealth = 100;
     enemyHealth = 100;
-    elements.game.playerName.innerText = playerName;
-    elements.game.playerHealth.innerText = playerHealth;
-    elements.game.enemyName.innerText = enemyName;
-    elements.game.enemyHealth.innerText = enemyHealth;
+    elements.game.playerName.innerText = "Thine Name: " + playerName;
+    elements.game.playerHealth.innerText = "Thine Vitality: " + playerHealth;
+    elements.game.enemyName.innerText = "Name of thine adversary: " + enemyName;
+    elements.game.enemyHealth.innerText = "Vitality of thine adversary: " + enemyHealth;
+    elements.game.coins.innerText = "Coin in thine coffers: " + coin;
     elements.game.canvas.width = window.screen.width / 4;
     elements.game.canvas.height = window.screen.height / 4;
+    enemyPos = elements.game.canvas.width * (5 / 8);
+    playerPos = elements.game.canvas.width / 8;
+    drawBackground();
     enemyImageChooser = Math.floor(Math.random() * 6) + 1;
-    playerImage.src = 'assets/images/man.jpg';
+    playerImage.src = 'assets/images/player_1.png';
     enemyImage.src = enemyImagePath + enemyImageChooser + ".png";
+    shopImage.src = 'assets/images/shop.png';
     playerImage.onload = () => {
-        ctx.drawImage(playerImage, elements.game.canvas.width / 8, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2)
+        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2)
     }
     enemyImage.onload = () => {
-        ctx.drawImage(enemyImage, elements.game.canvas.width * (5 / 8), elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2)
+        ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2)
     }
     showScreen(elements.game.screen);
     newQuestion();
 }
 
 function btn1Click() {
-    handleInput(x, 0, false);
+    if (isShop) {
+        purchase(0);
+    } else {
+        handleInput(x, 0, false);
+    }
 }
 
 function btn2Click() {
-    handleInput(x, 1, false);
+    if (isShop) {
+        purchase(1);
+    } else {
+        handleInput(x, 1, false);
+    }
 }
 
 function btn3Click() {
-    handleInput(x, 2, false);
+    if (isShop) {
+        purchase(2);
+    } else {
+        handleInput(x, 2, false);
+    }
 }
 
 function btn4Click() {
-    handleInput(x, 3, false);
+    if (isShop) {
+        purchase(3);
+    } else {
+        handleInput(x, 3, false);
+    }
 }
 
 function newQuestion() {
@@ -165,6 +234,78 @@ function newQuestion() {
     timeLeft = x.maxTime;
     tid = setTimeout(timer, 1000);
     setTimeout(updateUI, 500);
+}
+
+function shop() {
+    isShop = true;
+    elements.game.playerName.innerText = "";
+    elements.game.playerHealth.innerText = "";
+    elements.game.enemyName.innerText = "";
+    elements.game.enemyHealth.innerText = "";
+    elements.game.time.innerText = "";
+    elements.game.coins.innerText = "Thine coin: " + coin;
+    elements.game.button1.innerText = "Accelerate thine mind! Cost: " + timeUpgradeLevel; 
+    elements.game.button2.innerText = "Increase thine strength! cost: " + strengthLevel;
+    elements.game.button3.innerText = "Hinder thine enemies! cost: " + enemyWeakness;
+    elements.game.button4.innerText = "Exit Shop";
+    elements.game.questionText.innerText = "Welcome to the market, spend thine coin";
+    ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
+    drawBackground();
+    ctx.drawImage(shopImage, (elements.game.canvas.width / 2) - (elements.game.canvas.height / 2), 0, elements.game.canvas.height, elements.game.canvas.height);
+    elements.game.button1.disabled = false;
+    elements.game.button2.disabled = false;
+    elements.game.button3.disabled = false;
+    elements.game.button4.disabled = false;
+}
+
+function purchase(choice) {
+    if (choice === 0) {
+        if (coin >= timeUpgradeLevel) {
+            coin -= timeUpgradeLevel;
+            timeUpgradeLevel += 1;
+            elements.game.coins.innerText = coin;
+            elements.game.button1.innerText = "Praise thine business";
+            elements.game.button1.disabled = true; 
+        } else {
+            alert("Thine coin is too measly to acquire such a skill");
+        }
+    } else if (choice === 1) {
+        if (coin >= strengthLevel) {
+            coin -= strengthLevel;
+            strengthLevel += 1;
+            elements.game.coins.innerText = coin;
+            elements.game.button2.innerText = "Praise thine business";
+            elements.game.button2.disabled = true; 
+        } else {
+            alert("Thine coin is too measly to acquire such a skill");
+        }
+    } else if (choice === 2) {
+        if (coin >= enemyWeakness) {
+            coin -= enemyWeakness;
+            enemyWeakness += 1;
+            elements.game.coins.innerText = coin;
+            elements.game.button3.innerText = "Praise thine business";
+            elements.game.button3.disabled = true; 
+        } else {
+            alert("Thine coin is too measly to acquire such a skill");
+        }
+    } else if (choice === 3) {
+        isShop = false;
+        ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
+        drawBackground();
+        playerPos = elements.game.canvas.width / 8;
+        enemyPos = elements.game.canvas.width * (5 / 8);
+        enemyHealth = 100;
+        enemyName = randomNameGen();
+        enemyImageChooser = Math.floor(Math.random() * 7) + 1;
+        enemyImage.src = enemyImagePath + enemyImageChooser + ".png";
+        if (strengthLevel > 1) {
+            playerImage.src = 'assets/images/player_0.png';
+        }
+        difficulty += 1;
+        playerHealth += Math.floor(playerHealth / 3);
+        newQuestion();
+    }
 }
 
 function chooseQuestion(difficulty) {
@@ -204,7 +345,8 @@ function createAdditionQuestion(difficulty) {
         }
     }
     possibleAnswers[correctAnswerIndex] = answer;
-    const maxtime = 3 + (difficulty - 1) * 2;
+    let maxtime = (3 + (difficulty - 1) * 2);
+    maxtime += (maxtime / 2) * (timeUpgradeLevel - 1);
     return new Question(text, answer, possibleAnswers, correctAnswerIndex, maxtime);
 }
 
@@ -223,7 +365,8 @@ function createSubtractionQuestion(difficulty) {
         }
     }
     possibleAnswers[correctAnswerIndex] = answer;
-    const maxtime = 5 + (difficulty - 1) * 2;
+    let maxtime = 5 + (difficulty - 1) * 2;
+    maxtime += (maxtime / 2) * (timeUpgradeLevel - 1);
     return new Question(text, answer, possibleAnswers, correctAnswerIndex, maxtime);
 }
 
@@ -242,13 +385,14 @@ function createMultiplicationQuestion(difficulty) {
         }
     }
     possibleAnswers[correctAnswerIndex] = answer;
-    const maxtime = 5 + (difficulty - 1) * 2;
+    let maxtime = 5 + (difficulty - 1) * 2;
+    maxtime += (maxtime / 2) * (timeUpgradeLevel - 1);
     return new Question(text, answer, possibleAnswers, correctAnswerIndex, maxtime);
 }
 
 function timer() {
     if (timeLeft % 1 == 0) {
-        elements.game.time.innerText = timeLeft;
+        elements.game.time.innerText = "Time remaining for thee: " + timeLeft;
     }
     if (timeLeft === 0) {
         handleInput(5, x, true);
@@ -262,10 +406,15 @@ function abortTimer() {
 }
 
 function updateUI() {
-    elements.game.playerName.innerText = playerName;
-    elements.game.playerHealth.innerText = playerHealth;
-    elements.game.enemyName.innerText = enemyName;
-    elements.game.enemyHealth.innerText = enemyHealth;
+    elements.game.playerName.innerText = "Thine Name: " + playerName;
+    elements.game.playerHealth.innerText = "Thine Vitality: " + playerHealth;
+    elements.game.enemyName.innerText = "Name of thine adversary: " + enemyName;
+    elements.game.enemyHealth.innerText = "Vitality of thine adversary: " + enemyHealth;
+    elements.game.coins.innerText = "Coin in thine coffers: " + coin;
+    ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
+    drawBackground();
+    ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
+    ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2);
     elements.game.button1.innerText = x.possibleAnswers[0];
     elements.game.button2.innerText = x.possibleAnswers[1];
     elements.game.button3.innerText = x.possibleAnswers[2];
@@ -282,19 +431,25 @@ function handleInput(question, num, timeOut) {
     elements.game.button1.disabled = true;
     elements.game.button2.disabled = true;
     elements.game.button3.disabled = true;
-    elements.game.button4.disabled = true; 
+    elements.game.button4.disabled = true;
+    let damageToPlayer = Math.floor(Math.random() * 21);
+    damageToPlayer += damageToPlayer * (difficulty / 3);
+    damageToPlayer = Math.floor((damageToPlayer) / enemyWeakness);
     if (! timeOut) {
         if (question.possibleAnswers[num] === question.answer) {
             playerPos = elements.game.canvas.width / 8;
             movePlayer();
-            enemyHealth -= Math.floor((15 - (15 / (timeLeft + 1.5))));      
+            let damageToEnemy = Math.floor((25 - (25 / (timeLeft + 1.5))));
+            damageToEnemy += (damageToEnemy / 2) * (strengthLevel - 1);
+            enemyHealth -= damageToEnemy;
+            damageToPlayer -= (damageToPlayer + 1) / 2;
         } else {
             moveEnemy();
         }
     } else {
         moveEnemy();
     }
-    playerHealth -= Math.floor(Math.random() * 11); 
+    playerHealth -= damageToPlayer; 
 }
 
 function randomNameGen() {
@@ -319,29 +474,27 @@ function movePlayer() {
     if (hasMoved) {
         ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
         playerPos = playerPos - 8;
-        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2);
-        ctx.drawImage(enemyImage, elements.game.canvas.width * (5 / 8), elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
+        drawBackground();
+        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2);
+        ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
     } else {
         ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
         playerPos = playerPos + 8;
-        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2);
-        ctx.drawImage(enemyImage, elements.game.canvas.width * (5 / 8), elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
+        drawBackground();
+        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2);
+        ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
     }
     if (playerPos < elements.game.canvas.width / 8) {
         hasMoved = false;
         enemyPos = elements.game.canvas.width * (5 / 8);
         if (enemyHealth <= 0) {
-            alert("You have defeated " + enemyName + ", now prepare for the next enemy! \n Health Partially Restored.");
-            enemyHealth = 100;
-            enemyName = randomNameGen();
-            enemyImageChooser = Math.floor(Math.random() * 6) + 1;
-            enemyImage.src = enemyImagePath + enemyImageChooser + ".png";
-            difficulty += 1;
-            ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
-            ctx.drawImage(enemyImage, elements.game.canvas.width * (5 / 8), elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2)
-            ctx.drawImage(playerImage, elements.game.canvas.width / 8, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2);
-            playerHealth += Math.floor(playerHealth / 2);
-            newQuestion();
+            coin += 1;
+            alert("Huzzah! Thou hast defeated the fearsome " + enemyName + ", gather thine senses, for another enemy approaches! \nThou vitality hast been partially restored.");
+            if ((coin >= enemyWeakness) || (coin >= strengthLevel) || (coin >= timeUpgradeLevel)) {
+                shop();
+            } else {
+                purchase(3);
+            }
         } else {
             moveEnemy();
         }
@@ -358,22 +511,28 @@ function moveEnemy() {
     if (hasMoved) {
         ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
         enemyPos = enemyPos + 8;
+        drawBackground();
         ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
-        ctx.drawImage(playerImage, elements.game.canvas.width / 8, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2);
+        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2);
     } else {
         ctx.clearRect(0, 0, elements.game.canvas.width, elements.game.canvas.height);
         enemyPos = enemyPos - 8;
+        drawBackground();
         ctx.drawImage(enemyImage, enemyPos, elements.game.canvas.height / 4, enemyImage.width / 2, enemyImage.height / 2);
-        ctx.drawImage(playerImage, elements.game.canvas.width / 8, elements.game.canvas.height / 4, elements.game.canvas.width / 8, elements.game.canvas.height / 2);
+        ctx.drawImage(playerImage, playerPos, elements.game.canvas.height / 4, playerImage.width / 2, playerImage.height / 2);
     }
     if (enemyPos > elements.game.canvas.width * (5 / 8)) {
         hasMoved = false;
         if (playerHealth > 0) {
             newQuestion();
         } else {
+            played = true;
             playerHealth = 0;
             updateUI();
-            showHighscores();
+            gameMusic.pause();
+            gameMusic.src = "assets/sounds/deathTheme.mp3"
+            gameMusic.load();
+            showHighscores(played);
         }
     } else {
         requestAnimationFrame(moveEnemy);
@@ -381,23 +540,21 @@ function moveEnemy() {
     
 }
 
-function showHighscores() {
+function showHighscores(played) {
     let scores;
-    if (localStorage.getItem("highScoresList") === null) {
+    if ((localStorage.getItem("highScoresList") === null) && (played)) {
         localStorage.setItem("highScoresList", playerName + "." + difficulty + ",");
         scores = localStorage.getItem("highScoresList");
     } else {
         scores = localStorage.getItem("highScoresList");
-        scores = scores + playerName + "." + difficulty + ",";
+        if (played) {
+            scores = scores + playerName + "." + difficulty + ",";
+            localStorage.setItem("highScoresList", scores);
+        }
     }
-    localStorage.setItem("highScoresList", scores);
     scores = scores.split(",");
     const sortedScores = sortHighscores(scores);
-    console.log(sortedScores);
-    elements.highscores.scores.innerText = sortedScores;
-    gameMusic.pause();
-    gameMusic.src = "assets/sounds/deathTheme.mp3"
-    gameMusic.load();
+    elements.highscores.scores.innerText = sortedScores.toString().replace(/,/g, " Foe(s) \n").replace(/[.]/g, " Hast Encountered ") + " Foe(s)";
     gameMusic.play();
     showScreen(elements.highscores.screen);
 }
@@ -416,6 +573,9 @@ function sortHighscores(highscores) {
             highscores[i] = highscores[max];
             highscores[max] = tmp;
         }
+    }
+    if (len > 10) {
+        highscores.length = 10;
     }
     return highscores;
 }
