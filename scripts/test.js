@@ -89,7 +89,7 @@ elements.play.playButton.addEventListener("click", function(){
     showLogin();
     gameMusic.play();
 });
-
+//
 elements.play.instructionButton.addEventListener("click", function(){
     showInstructions();
     gameMusic.play();
